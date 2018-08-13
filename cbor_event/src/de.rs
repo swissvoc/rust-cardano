@@ -1,10 +1,13 @@
 //! CBOR deserialisation tooling
 
-use std::{fmt, ops::{Deref}, collections::BTreeMap};
+use internal::core::{self, fmt, ops::{Deref}};
 use error::Error;
 use result::Result;
 use types::{Type, Special, Bytes};
 use len::Len;
+
+#[cfg(feature = "std")]
+use std::{collections::BTreeMap};
 
 pub trait Deserialize : Sized {
     /// method to implement to deserialise an object from the given
@@ -18,6 +21,7 @@ impl Deserialize for u32 {
     }
 }
 
+#[cfg(feature = "std")]
 impl<T: Deserialize> Deserialize for Vec<T> {
     fn deserialize<'a>(raw: &mut RawCbor<'a>) -> Result<Self> {
         let len = raw.array()?;
@@ -45,6 +49,7 @@ impl<T: Deserialize> Deserialize for Vec<T> {
         Ok(vec)
     }
 }
+#[cfg(feature = "std")]
 impl<K: Deserialize+Ord, V: Deserialize> Deserialize for BTreeMap<K,V> {
     fn deserialize<'a>(raw: &mut RawCbor<'a>) -> Result<Self> {
         let len = raw.map()?;
@@ -97,8 +102,8 @@ impl<K: Deserialize+Ord, V: Deserialize> Deserialize for BTreeMap<K,V> {
 /// ```
 /// use cbor_event::de::*;
 ///
-/// let vec = vec![0x18, 0x40];
-/// let mut raw = RawCbor::from(&vec);
+/// let vec = &[0x18, 0x40][..];
+/// let mut raw = RawCbor::from(vec);
 ///
 /// assert!(raw.unsigned_integer().is_ok());
 /// ```
@@ -106,8 +111,8 @@ impl<K: Deserialize+Ord, V: Deserialize> Deserialize for BTreeMap<K,V> {
 /// ```
 /// use cbor_event::de::*;
 ///
-/// let vec = vec![0x18, 0x40];
-/// let mut raw = RawCbor::from(&vec);
+/// let vec = &[0x18, 0x40][..];
+/// let mut raw = RawCbor::from(vec);
 ///
 /// assert!(raw.array().is_err());
 /// ```
@@ -123,8 +128,8 @@ impl<K: Deserialize+Ord, V: Deserialize> Deserialize for BTreeMap<K,V> {
 /// ```
 /// use cbor_event::de::*;
 ///
-/// let vec = vec![0,1,2,3];
-/// let raw = RawCbor::from(&vec);
+/// let vec = &[0,1,2,3][..];
+/// let raw = RawCbor::from(vec);
 /// ```
 ///
 /// ```
@@ -133,8 +138,8 @@ impl<K: Deserialize+Ord, V: Deserialize> Deserialize for BTreeMap<K,V> {
 /// // here the integer takes ownership of its own data as this is a
 /// // simple enough type
 /// let integer = {
-///     let vec = vec![0x18, 0x40];
-///     let mut raw = RawCbor::from(&vec);
+///     let vec = &[0x18, 0x40][..];
+///     let mut raw = RawCbor::from(vec);
 ///     raw.unsigned_integer().unwrap()
 /// };
 ///
@@ -151,7 +156,7 @@ impl<K: Deserialize+Ord, V: Deserialize> Deserialize for BTreeMap<K,V> {
 /// // here this won't compile because the bytes' lifetime is bound
 /// // to the parent RawCbor (variable `raw`, which is bound to `vec`).
 /// let bytes = {
-///     let vec = vec![0x43, 0x01, 0x02, 0x03];
+///     let vec = &[0x43, 0x01, 0x02, 0x03][..];
 ///     let mut raw = RawCbor::from(&vec);
 ///     raw.bytes().unwrap()
 /// };
@@ -238,8 +243,8 @@ impl<'a> RawCbor<'a> {
     /// ```
     /// use cbor_event::{de::*, Type};
     ///
-    /// let vec = vec![0x18, 0x40];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0x18, 0x40][..];
+    /// let mut raw = RawCbor::from(vec);
     /// let cbor_type = raw.cbor_type().unwrap();
     ///
     /// assert!(cbor_type == Type::UnsignedInteger);
@@ -281,8 +286,8 @@ impl<'a> RawCbor<'a> {
     /// ```
     /// use cbor_event::{de::*, Len};
     ///
-    /// let vec = vec![0x83, 0x01, 0x02, 0x03];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0x83, 0x01, 0x02, 0x03][..];
+    /// let mut raw = RawCbor::from(vec);
     /// let (len, len_sz) = raw.cbor_len().unwrap();
     ///
     /// assert_eq!(len, Len::Len(3));
@@ -327,8 +332,8 @@ impl<'a> RawCbor<'a> {
     /// ```
     /// use cbor_event::de::{*};
     ///
-    /// let vec = vec![0x18, 0x40];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0x18, 0x40][..];
+    /// let mut raw = RawCbor::from(vec);
     ///
     /// let integer = raw.unsigned_integer().unwrap();
     ///
@@ -338,8 +343,8 @@ impl<'a> RawCbor<'a> {
     /// ```should_panic
     /// use cbor_event::de::{*};
     ///
-    /// let vec = vec![0x83, 0x01, 0x02, 0x03];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0x83, 0x01, 0x02, 0x03][..];
+    /// let mut raw = RawCbor::from(vec);
     ///
     /// // the following line will panic:
     /// let integer = raw.unsigned_integer().unwrap();
@@ -365,8 +370,8 @@ impl<'a> RawCbor<'a> {
     /// ```
     /// use cbor_event::de::{*};
     ///
-    /// let vec = vec![0x38, 0x29];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0x38, 0x29][..];
+    /// let mut raw = RawCbor::from(vec);
     ///
     /// let integer = raw.negative_integer().unwrap();
     ///
@@ -393,8 +398,8 @@ impl<'a> RawCbor<'a> {
     /// ```
     /// use cbor_event::de::{*};
     ///
-    /// let vec = vec![0x52, 0x73, 0x6F, 0x6D, 0x65, 0x20, 0x72, 0x61, 0x6E, 0x64, 0x6F, 0x6D, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6E, 0x67];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0x52, 0x73, 0x6F, 0x6D, 0x65, 0x20, 0x72, 0x61, 0x6E, 0x64, 0x6F, 0x6D, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6E, 0x67][..];
+    /// let mut raw = RawCbor::from(vec);
     ///
     /// let bytes = raw.bytes().unwrap();
     /// ```
@@ -422,14 +427,14 @@ impl<'a> RawCbor<'a> {
     /// ```
     /// use cbor_event::de::{*};
     ///
-    /// let vec = vec![0x64, 0x74, 0x65, 0x78, 0x74];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0x64, 0x74, 0x65, 0x78, 0x74][..];
+    /// let mut raw = RawCbor::from(vec);
     ///
     /// let text = raw.text().unwrap();
     ///
     /// assert!(&*text == "text");
     /// ```
-    pub fn text(&mut self) -> Result<String> {
+    pub fn text(&mut self) -> Result<&'a str> {
         self.cbor_expect_type(Type::Text)?;
         let (len, len_sz) = self.cbor_len()?;
         match len {
@@ -438,7 +443,7 @@ impl<'a> RawCbor<'a> {
                 let start = 1 + len_sz;
                 let end   = start + len as usize;
                 let bytes = &self.0[start..end as usize];
-                let text = String::from_utf8(Vec::from(bytes))?;
+                let text = core::str::from_utf8(&bytes)?; // String::from_utf8(Vec::from(bytes))?;
                 self.advance(end)?;
                 Ok(text)
             }
@@ -454,8 +459,8 @@ impl<'a> RawCbor<'a> {
     /// ```
     /// use cbor_event::{de::{*}, Len};
     ///
-    /// let vec = vec![0x86, 0,1,2,3,4,5];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0x86, 0,1,2,3,4,5][..];
+    /// let mut raw = RawCbor::from(vec);
     ///
     /// let len = raw.array().unwrap();
     ///
@@ -479,8 +484,8 @@ impl<'a> RawCbor<'a> {
     /// ```
     /// use cbor_event::{de::{*}, Len};
     ///
-    /// let vec = vec![0xA2, 0x00, 0x64, 0x74, 0x65, 0x78, 0x74, 0x01, 0x18, 0x2A];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0xA2, 0x00, 0x64, 0x74, 0x65, 0x78, 0x74, 0x01, 0x18, 0x2A][..];
+    /// let mut raw = RawCbor::from(vec);
     ///
     /// let len = raw.map().unwrap();
     ///
@@ -503,8 +508,8 @@ impl<'a> RawCbor<'a> {
     /// ```
     /// use cbor_event::{de::{*}, Len};
     ///
-    /// let vec = vec![0xD8, 0x18, 0x64, 0x74, 0x65, 0x78, 0x74];
-    /// let mut raw = RawCbor::from(&vec);
+    /// let vec = &[0xD8, 0x18, 0x64, 0x74, 0x65, 0x78, 0x74][..];
+    /// let mut raw = RawCbor::from(vec);
     ///
     /// let tag = raw.tag().unwrap();
     ///
@@ -551,6 +556,7 @@ impl<'a> RawCbor<'a> {
 impl<'a> From<&'a [u8]> for RawCbor<'a> {
     fn from(bytes: &'a [u8]) -> RawCbor<'a> { RawCbor(bytes) }
 }
+#[cfg(feature = "std")]
 impl<'a> From<&'a Vec<u8>> for RawCbor<'a> {
     fn from(bytes: &'a Vec<u8>) -> RawCbor<'a> { RawCbor(bytes.as_slice()) }
 }
@@ -571,8 +577,8 @@ mod test {
 
     #[test]
     fn negative_integer() {
-        let vec = vec![0x38, 0x29];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0x38, 0x29][..];
+        let mut raw = RawCbor::from(vec);
 
         let integer = raw.negative_integer().unwrap();
 
@@ -581,16 +587,16 @@ mod test {
 
     #[test]
     fn bytes() {
-        let vec = vec![0x52, 0x73, 0x6F, 0x6D, 0x65, 0x20, 0x72, 0x61, 0x6E, 0x64, 0x6F, 0x6D, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6E, 0x67];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0x52, 0x73, 0x6F, 0x6D, 0x65, 0x20, 0x72, 0x61, 0x6E, 0x64, 0x6F, 0x6D, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6E, 0x67][..];
+        let mut raw = RawCbor::from(vec);
 
         let bytes = raw.bytes().unwrap();
         assert_eq!(&vec[1..], &*bytes);
     }
     #[test]
     fn bytes_empty() {
-        let vec = vec![0x40];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0x40][..];
+        let mut raw = RawCbor::from(vec);
 
         let bytes = raw.bytes().unwrap();
         assert!(bytes.is_empty());
@@ -598,27 +604,27 @@ mod test {
 
     #[test]
     fn text() {
-        let vec = vec![0x64, 0x74, 0x65, 0x78, 0x74];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0x64, 0x74, 0x65, 0x78, 0x74][..];
+        let mut raw = RawCbor::from(vec);
 
         let text = raw.text().unwrap();
 
-        assert_eq!(&text, "text");
+        assert_eq!(&text, &"text");
     }
     #[test]
     fn text_empty() {
-        let vec = vec![0x60];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0x60][..];
+        let mut raw = RawCbor::from(vec);
 
         let text = raw.text().unwrap();
 
-        assert_eq!(&text, "");
+        assert_eq!(&text, &"");
     }
 
     #[test]
     fn array() {
-        let vec = vec![0x86, 0,1,2,3,4,5];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0x86, 0,1,2,3,4,5][..];
+        let mut raw = RawCbor::from(vec);
 
         let len = raw.array().unwrap();
 
@@ -634,8 +640,8 @@ mod test {
     }
     #[test]
     fn array_empty() {
-        let vec = vec![0x80];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0x80][..];
+        let mut raw = RawCbor::from(vec);
 
         let len = raw.array().unwrap();
 
@@ -644,8 +650,8 @@ mod test {
     }
     #[test]
     fn array_indefinite() {
-        let vec = vec![0x9F, 0x01, 0x02, 0xFF];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0x9F, 0x01, 0x02, 0xFF][..];
+        let mut raw = RawCbor::from(vec);
 
         let len = raw.array().unwrap();
 
@@ -661,14 +667,14 @@ mod test {
 
     #[test]
     fn complex_array() {
-        let vec = vec![0x85, 0x64, 0x69, 0x6F, 0x68, 0x6B, 0x01, 0x20, 0x84, 0, 1, 2, 3, 0x10, /* garbage... */ 0, 1, 2, 3, 4, 5, 6];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0x85, 0x64, 0x69, 0x6F, 0x68, 0x6B, 0x01, 0x20, 0x84, 0, 1, 2, 3, 0x10, /* garbage... */ 0, 1, 2, 3, 4, 5, 6][..];
+        let mut raw = RawCbor::from(vec);
 
         let len = raw.array().unwrap();
 
         assert_eq!(len, Len::Len(5));
 
-        assert_eq!("iohk", &raw.text().unwrap());
+        assert_eq!(&"iohk", &raw.text().unwrap());
         assert_eq!(1, raw.unsigned_integer().unwrap());
         assert_eq!(-1, raw.negative_integer().unwrap());
 
@@ -687,8 +693,8 @@ mod test {
 
     #[test]
     fn map() {
-        let vec = vec![0xA2, 0x00, 0x64, 0x74, 0x65, 0x78, 0x74, 0x01, 0x18, 0x2A];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0xA2, 0x00, 0x64, 0x74, 0x65, 0x78, 0x74, 0x01, 0x18, 0x2A][..];
+        let mut raw = RawCbor::from(vec);
 
         let len = raw.map().unwrap();
 
@@ -697,7 +703,7 @@ mod test {
         let k = raw.unsigned_integer().unwrap();
         let v = raw.text().unwrap();
         assert_eq!(0, k);
-        assert_eq!("text", &v);
+        assert_eq!(&"text", &v);
 
         let k = raw.unsigned_integer().unwrap();
         let v = raw.unsigned_integer().unwrap();
@@ -707,8 +713,8 @@ mod test {
 
     #[test]
     fn map_empty() {
-        let vec = vec![0xA0];
-        let mut raw = RawCbor::from(&vec);
+        let vec = &[0xA0][..];
+        let mut raw = RawCbor::from(vec);
 
         let len = raw.map().unwrap();
 

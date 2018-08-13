@@ -15,8 +15,9 @@ use error::Error;
 use len::Len;
 use de::*;
 use se::*;
+use internal::{Write};
 
-use std::{collections::{BTreeMap}, io::Write};
+use std::{collections::{BTreeMap}};
 
 /// CBOR Object key, represents the possible supported values for
 /// a CBOR key in a CBOR Map.
@@ -50,8 +51,8 @@ impl Deserialize for ObjectKey {
         match raw.cbor_type()? {
             Type::UnsignedInteger => Ok(ObjectKey::Integer(raw.unsigned_integer()?)),
             Type::Bytes           => Ok(ObjectKey::Bytes(Vec::from(raw.bytes()?.as_ref()))),
-            Type::Text            => Ok(ObjectKey::Text(raw.text()?)),
-            t                     => Err(Error::CustomError(format!("Type `{:?}' is not a support type for CBOR Map's key", t)))
+            Type::Text            => Ok(ObjectKey::Text(raw.text()?.to_owned())),
+            t                     => Err(Error::UnsupportedKeyType(t)),
         }
     }
 }
@@ -126,7 +127,7 @@ impl Deserialize for Value {
             Type::UnsignedInteger => Ok(Value::U64(raw.unsigned_integer()?)),
             Type::NegativeInteger => Ok(Value::I64(raw.negative_integer()?)),
             Type::Bytes           => Ok(Value::Bytes(Vec::from(raw.bytes()?.as_ref()))),
-            Type::Text            => Ok(Value::Text(raw.text()?)),
+            Type::Text            => Ok(Value::Text(raw.text()?.to_owned())),
             Type::Array           => {
                 let len = raw.array()?;
                 let mut vec = Vec::new();

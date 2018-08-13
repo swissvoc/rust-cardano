@@ -1,9 +1,9 @@
 //! CBOR serialisation tooling
-use std::io::{Write};
-
-use result::Result;
+use result::{Result};
 use types::{Type, Special};
-use len::Len;
+use len::{Len};
+
+use super::internal::Write;
 
 pub trait Serialize {
     fn serialize<W: Write+Sized>(&self, serializer: Serializer<W>) -> Result<Serializer<W>>;
@@ -125,7 +125,8 @@ pub fn serialize_indefinite_array<'a, C, T, W>(data: C, serializer: Serializer<W
 /// serializer.write_bytes(&bytes).unwrap();
 /// ```
 ///
-pub fn serialize_cbor_in_cbor<T, W>(data: T, serializer: Serializer<W>) -> Result<Serializer<W>>
+#[cfg(feature = "std")]
+pub fn serialize_cbor_in_cbor<'a, T, W>(data: T, serializer: Serializer<W>) -> Result<Serializer<W>>
     where T: Serialize
         , W: Write+Sized
 {
@@ -138,11 +139,13 @@ pub fn serialize_cbor_in_cbor<T, W>(data: T, serializer: Serializer<W>) -> Resul
 // every _reserve_ calls.
 const DEFAULT_CAPACITY : usize = 512;
 
-/// simple CBOR serializer into any
-/// [`std::io::Write`](https://doc.rust-lang.org/std/io/trait.Write.html).
+/// simple CBOR serializer into any implementation of
+/// [`cbor_event::Write`](../trait.Write.html).
 ///
 #[derive(Debug)]
 pub struct Serializer<W: Write+Sized>(W);
+
+#[cfg(feature = "std")]
 impl Serializer<Vec<u8>> {
     /// create a new serializer.
     ///
@@ -163,12 +166,14 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::se::{Serializer};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     ///
     /// let bytes = serializer.finalize();
     ///
-    /// # assert!(bytes.is_empty());
+    /// # assert_eq!(bytes, &[][..]);
     /// ```
     #[inline]
     pub fn finalize(self) -> W { self.0 }
@@ -242,8 +247,10 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::se::{Serializer};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer.write_unsigned_integer(0x12)
     ///     .expect("write a negative integer");
     ///
@@ -260,8 +267,10 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::se::{Serializer};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer.write_negative_integer(-12)
     ///     .expect("write a negative integer");
     ///
@@ -276,8 +285,10 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::se::{Serializer};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer.write_bytes(vec![0,1,2,3])
     ///     .expect("write bytes");
     ///
@@ -294,8 +305,10 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::se::{Serializer};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer.write_text(r"hello world")
     ///     .expect("write text");
     ///
@@ -318,12 +331,14 @@ impl<W: Write+Sized> Serializer<W> {
     /// - if you set an indefinite length, you are responsible to write the `Special::Break`
     ///   when your stream ends.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// use cbor_event::{se::{Serializer}, Len};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer
     ///     .write_array(Len::Len(2)).expect("write an array")
     ///     .write_text(r"hello").expect("write text")
@@ -335,8 +350,10 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::{se::{Serializer}, Len, Special};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer
     ///     .write_array(Len::Indefinite).expect("write an array")
     ///     .write_text(r"hello").expect("write text")
@@ -372,8 +389,10 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::{se::{Serializer}, Len};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer
     ///     .write_map(Len::Len(2)).expect("write a map")
     ///     .write_unsigned_integer(1).expect("write unsigned integer")
@@ -387,8 +406,10 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::{se::{Serializer}, Len, Special};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer
     ///     .write_map(Len::Indefinite).expect("write a map")
     ///     .write_unsigned_integer(1).expect("write unsigned integer")
@@ -417,8 +438,10 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::{se::{Serializer}, Len};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer
     ///     .write_tag(24).expect("write a tag")
     ///     .write_text(r"hello").expect("write text");
@@ -437,8 +460,10 @@ impl<W: Write+Sized> Serializer<W> {
     ///
     /// ```
     /// use cbor_event::{se::{Serializer}, Len, Special};
+    /// use cbor_event::{RefBuffer};
     ///
-    /// let serializer = Serializer::new_vec();
+    /// let buffer = &mut [0u8;256][..];
+    /// let serializer = Serializer::new(RefBuffer::from(buffer));
     /// let serializer = serializer
     ///     .write_array(Len::Indefinite).expect("write an array")
     ///     .write_special(Special::Bool(false)).expect("write false")
@@ -476,7 +501,9 @@ impl<W: Write+Sized> Serializer<W> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    #[cfg(feature = "std")]
+    mod vec {
+    use super::super::*;
 
     #[test]
     fn unsigned_integer_0() {
@@ -493,6 +520,7 @@ mod test {
         let serializer = serializer.write_unsigned_integer(0x20)
             .expect("write unsigned integer");
         let bytes = serializer.finalize();
+
         assert_eq!(bytes, [0x18, 0x20].as_ref());
     }
 
@@ -571,7 +599,7 @@ mod test {
     #[test]
     fn bytes_0() {
         let serializer = Serializer::new_vec();
-        let serializer = serializer.write_bytes(&vec![])
+        let serializer = serializer.write_bytes(&[][..])
             .expect("write unsigned integer");
         let bytes = serializer.finalize();
         assert_eq!(bytes, [0x40].as_ref());
@@ -580,7 +608,7 @@ mod test {
     #[test]
     fn bytes_1() {
         let serializer = Serializer::new_vec();
-        let serializer = serializer.write_bytes(&vec![0b101010])
+        let serializer = serializer.write_bytes(&[0b101010][..])
             .expect("write unsigned integer");
         let bytes = serializer.finalize();
         assert_eq!(bytes, [0x41, 0b101010].as_ref());
@@ -624,5 +652,175 @@ mod test {
         assert!(test_special(Special::Unassigned(10), [0xea].as_ref()));
         assert!(test_special(Special::Unassigned(19), [0xf3].as_ref()));
         assert!(test_special(Special::Unassigned(24), [0xf8, 0x18].as_ref()));
+    }
+    }
+    mod refbuffer {
+    use super::super::*;
+    use internal::RefBuffer;
+
+    #[test]
+    fn unsigned_integer_0() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_unsigned_integer(0x12)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x12].as_ref());
+    }
+
+    #[test]
+    fn unsigned_integer_1() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_unsigned_integer(0x20)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+
+        assert_eq!(bytes, [0x18, 0x20].as_ref());
+    }
+
+    #[test]
+    fn unsigned_integer_2() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_unsigned_integer(0x2021)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x19, 0x20, 0x21].as_ref());
+    }
+
+    #[test]
+    fn unsigned_integer_3() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_unsigned_integer(0x20212223)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x1a, 0x20, 0x21, 0x22, 0x23].as_ref());
+    }
+
+    #[test]
+    fn unsigned_integer_4() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_unsigned_integer(0x2021222324252627)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x1b, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27].as_ref());
+    }
+
+    #[test]
+    fn negative_integer_0() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_negative_integer(-12)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x2b].as_ref());
+    }
+
+    #[test]
+    fn negative_integer_1() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_negative_integer(-200)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x38, 0xc7].as_ref());
+    }
+
+    #[test]
+    fn negative_integer_2() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_negative_integer(-13201)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x39, 0x33, 0x90].as_ref());
+    }
+
+    #[test]
+    fn negative_integer_3() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_negative_integer(-13201782)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x3a, 0x00, 0xc9, 0x71, 0x75].as_ref());
+    }
+
+    #[test]
+    fn negative_integer_4() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_negative_integer(-9902201782)
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x3b, 0x00, 0x00, 0x00, 0x02, 0x4E, 0x37, 0x9B, 0xB5].as_ref());
+    }
+
+    #[test]
+    fn bytes_0() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_bytes(&[][..])
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x40].as_ref());
+    }
+
+    #[test]
+    fn bytes_1() {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_bytes(&[0b101010][..])
+            .expect("write unsigned integer");
+        let bytes = serializer.finalize();
+        assert_eq!(bytes, [0x41, 0b101010].as_ref());
+    }
+
+    fn test_special(cbor_type: Special, result: &[u8]) -> bool {
+        let buffer = &mut [0u8;256][..];
+        let serializer = Serializer::new(RefBuffer::from(buffer));
+        let serializer = serializer.write_special(cbor_type)
+            .expect("serialize a special");
+        let bytes = serializer.finalize();
+        #[cfg(feature = "std")]
+        println!("serializing: {:?}", cbor_type);
+        #[cfg(feature = "std")]
+        println!("  - expected: {:?}", result);
+        #[cfg(feature = "std")]
+        println!("  - got:      {:?}", bytes);
+        bytes == result
+    }
+
+    #[test]
+    fn special_false() {
+        assert!(test_special(Special::Bool(false), [0xf4].as_ref()))
+    }
+    #[test]
+    fn special_true() {
+        assert!(test_special(Special::Bool(true), [0xf5].as_ref()))
+    }
+    #[test]
+    fn special_null() {
+        assert!(test_special(Special::Null, [0xf6].as_ref()))
+    }
+    #[test]
+    fn special_undefined() {
+        assert!(test_special(Special::Undefined, [0xf7].as_ref()))
+    }
+    #[test]
+    fn special_break() {
+        assert!(test_special(Special::Break, [0xff].as_ref()))
+    }
+    #[test]
+    fn special_unassigned() {
+        assert!(test_special(Special::Unassigned(0), [0xe0].as_ref()));
+        assert!(test_special(Special::Unassigned(1), [0xe1].as_ref()));
+        assert!(test_special(Special::Unassigned(10), [0xea].as_ref()));
+        assert!(test_special(Special::Unassigned(19), [0xf3].as_ref()));
+        assert!(test_special(Special::Unassigned(24), [0xf8, 0x18].as_ref()));
+    }
     }
 }

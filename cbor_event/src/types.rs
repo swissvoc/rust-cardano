@@ -1,4 +1,4 @@
-use std::{ops::{Deref}};
+use internal::core::{ops::{Deref}};
 use result::Result;
 use error::Error;
 
@@ -106,7 +106,7 @@ impl Special {
     pub fn unwrap_bool(&self) -> Result<bool> {
         match self {
             Special::Bool(b) => Ok(*b),
-            _                => Err(Error::CustomError(format!("Expected Special::Bool, received {:?}", self)))
+            _                => Err(Error::ExpectedBool),
         }
     }
 
@@ -114,7 +114,7 @@ impl Special {
     pub fn unwrap_null(&self) -> Result<()> {
         match self {
             Special::Null => Ok(()),
-            _             => Err(Error::CustomError(format!("Expected Special::Null, received {:?}", self)))
+            _             => Err(Error::ExpectedNull),
         }
     }
 
@@ -122,7 +122,7 @@ impl Special {
     pub fn unwrap_undefined(&self) -> Result<()> {
         match self {
             Special::Undefined => Ok(()),
-            _                  => Err(Error::CustomError(format!("Expected Special::Undefined, received {:?}", self)))
+            _                  => Err(Error::ExpectedUndefined),
         }
     }
 
@@ -130,7 +130,7 @@ impl Special {
     pub fn unwrap_unassigned(&self) -> Result<u8> {
         match self {
             Special::Unassigned(v) => Ok(*v),
-            _                      => Err(Error::CustomError(format!("Expected Special::Unassigned, received {:?}", self)))
+            _                      => Err(Error::ExpectedUnassigned),
         }
     }
 
@@ -138,7 +138,7 @@ impl Special {
     pub fn unwrap_float(&self) -> Result<f64> {
         match self {
             Special::Float(f) => Ok(*f),
-            _                 => Err(Error::CustomError(format!("Expected Special::Float, received {:?}", self)))
+            _                 => Err(Error::ExpectedFloat),
         }
     }
 
@@ -146,7 +146,7 @@ impl Special {
     pub fn unwrap_break(&self) -> Result<()> {
         match self {
             Special::Break => Ok(()),
-            _              => Err(Error::CustomError(format!("Expected Special::Break, received {:?}", self)))
+            _              => Err(Error::ExpectedBreak),
         }
     }
 }
